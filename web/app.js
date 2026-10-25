@@ -44,7 +44,8 @@ function scaleRatio(v) {
 function setGauge(v) {
   const ratio = scaleRatio(Math.max(v, 0));
   fill.style.strokeDashoffset = 100 * (1 - ratio);
-  fill.style.opacity = ratio > 0 ? 1 : 0;
+  // En dessous de ~0,1 Mbit/s, l'arc serait réduit à ses deux extrémités arrondies : on le masque.
+  fill.style.opacity = ratio > 0.003 ? 1 : 0;
   $("liveValue").textContent = fmt(v);
 }
 const fmt = (n) => (n >= 100 ? n.toFixed(0) : n.toFixed(1));

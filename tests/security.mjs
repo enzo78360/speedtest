@@ -104,6 +104,20 @@ async function rendererTests() {
     check("Serveur saturé : arrêt immédiat sans boucle", refusal?.status === 429 && refusal.calls <= 8 && refusal.ms < 2000,
       refusal ? `${refusal.calls} requêtes, ${Math.round(refusal.ms)} ms` : "");
 
+    // Serveur qui répond normalement (simulé, pour ne pas dépendre de Cloudflare) : mesure > 0 sur toute la phase.
+    const okRun = await evaluate2(`(async () => {
+      const orig = window.fetch;
+      // Petite pause comme un vrai réseau (sinon la boucle ne rend jamais la main au navigateur).
+      window.fetch = async () => { await new Promise((r) => setTimeout(r, 20)); return new Response(new Uint8Array(2e6)); };
+      const t0 = performance.now();
+      let speed = null, error = null;
+      try { speed = await measureThroughput(downloadWorker, ["#000000", "#000000"]); } catch (e) { error = String(e); }
+      window.fetch = orig;
+      return { speed, error, ms: performance.now() - t0 };
+    })()`);
+    check("Téléchargement réussi : débit mesuré sur toute la phase", okRun?.speed > 1 && okRun.ms >= 9500,
+      okRun ? (okRun.error || `${Math.round(okRun.speed)} Mbit/s simulés en ${Math.round(okRun.ms)} ms`) : "");
+
     // Même refus vu par un navigateur (sans en-tête CORS) : simple erreur réseau.
     const netFail = await evaluate2(`(async () => {
       const orig = window.fetch;
