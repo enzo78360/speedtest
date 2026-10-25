@@ -58,6 +58,10 @@
 
       <canvas class="spark" id="spark" height="70"></canvas>
       <button id="againBtn" class="again" hidden>↻ Relancer le test</button>
+      <p class="notice">
+        En lançant le test, votre adresse IP est transmise à Cloudflare pour effectuer la mesure.
+        <a href="confidentialite.html">En savoir plus</a>
+      </p>
     </section>
 
     <section class="results">
@@ -80,11 +84,22 @@
     </section>
 
     <section class="history">
-      <h2>Historique</h2>
+      <div class="history-head">
+        <h2>Historique</h2>
+        <label class="switch">
+          <input type="checkbox" id="historyToggle">
+          <span class="slider" aria-hidden="true"></span>
+          Garder sur cet appareil
+        </label>
+        <button id="clearBtn" class="link" hidden>Effacer</button>
+      </div>
       <ul id="history"></ul>
     </section>
 
-    <footer>Mesures via speed.cloudflare.com</footer>
+    <footer>
+      Mesures via speed.cloudflare.com · Aucun cookie, aucun suivi ·
+      <a href="confidentialite.html">Confidentialité et mentions légales</a>
+    </footer>
   </main>
   <script src="app.js"></script>
 </body>

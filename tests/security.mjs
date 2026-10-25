@@ -78,7 +78,24 @@ async function rendererTests() {
     const rows = await evaluate2(`document.querySelectorAll("#history li").length`);
     check("Historique falsifié : entrées invalides ignorées", rows === 1, `${rows} ligne(s) affichée(s)`);
     check("Historique falsifié : pas d'injection HTML", (await evaluate2("window.__pwned2 === undefined && !document.querySelector('#history img, #history b')")) === true);
-    await evaluate2(`localStorage.removeItem("history"); true`);
+    // --- Vie privée (RGPD) : état d'une première ouverture ---
+    await evaluate2(`localStorage.clear(); location.reload(); true`);
+    await sleep(1500);
+    const { evaluate: evaluate3, ws: ws3 } = await connect();
+    check("RGPD : aucun cookie", (await evaluate3("document.cookie")) === "");
+    check("RGPD : rien enregistré sur l'appareil par défaut", (await evaluate3("localStorage.length")) === 0);
+    check("RGPD : historique désactivé par défaut", (await evaluate3(`document.getElementById("historyToggle").checked`)) === false);
+    const thirdParty = await evaluate3(`performance.getEntriesByType("resource").map((r) => r.name).filter((u) => !u.startsWith("file:"))`);
+    check("RGPD : aucune requête vers un tiers avant GO", Array.isArray(thirdParty) && thirdParty.length === 0, thirdParty?.join(", "));
+    await evaluate3(`document.getElementById("historyToggle").click(); true`);
+    check("RGPD : activer l'historique l'enregistre", (await evaluate3(`localStorage.getItem("history")`)) === "[]");
+    await evaluate3(`document.getElementById("historyToggle").click(); true`);
+    check("RGPD : désactiver l'historique l'efface", (await evaluate3("localStorage.length")) === 0);
+    await evaluate3(`document.querySelector('a[href="confidentialite.html"]').click(); true`);
+    await sleep(1000);
+    const privacyUrl = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json();
+    check("Page Confidentialité accessible", privacyUrl.some((t) => t.type === "page" && t.url.endsWith("confidentialite.html")));
+    ws3.close();
 
     const popup = await evaluate2(`String(window.open("http://example.com"))`);
     check("Fenêtres pop-up refusées", popup === "null");

@@ -2,7 +2,20 @@
 const { app, BrowserWindow, session, shell } = require("electron");
 const path = require("path");
 
-const INDEX = path.join(__dirname, "..", "web", "index.html");
+const WEB_DIR = path.join(__dirname, "..", "web");
+const INDEX = path.join(WEB_DIR, "index.html");
+
+// Seules les pages de l'application (dossier web/) peuvent être affichées dans la fenêtre.
+function isAppPage(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "file:") return false;
+    const file = path.normalize(decodeURIComponent(u.pathname.replace(/^\/([A-Za-z]:)/, "$1")));
+    return file.startsWith(WEB_DIR + path.sep) && file.endsWith(".html");
+  } catch {
+    return false;
+  }
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -19,6 +32,8 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      // Le correcteur peut télécharger des dictionnaires depuis des serveurs tiers : inutile ici.
+      spellcheck: false,
       devTools: !app.isPackaged,
     },
   });
@@ -37,8 +52,9 @@ app.on("web-contents-created", (_e, contents) => {
     openExternal(url);
     return { action: "deny" };
   });
-  // La fenêtre ne quitte jamais la page de l'application.
+  // La fenêtre ne quitte jamais les pages de l'application.
   contents.on("will-navigate", (e, url) => {
+    if (isAppPage(url)) return;
     e.preventDefault();
     openExternal(url);
   });

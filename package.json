@@ -1,7 +1,7 @@
 {
   "name": "speedtest",
   "productName": "SpeedTest",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Test de débit internet (ping, téléchargement, envoi)",
   "author": "enzo78360",
   "license": "MIT",

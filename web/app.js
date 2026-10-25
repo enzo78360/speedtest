@@ -161,9 +161,23 @@ function uploadWorker(onBytes, signal) {
 }
 
 // --- Historique ---
+// Optionnel (RGPD / art. 82 Informatique et Libertés) : rien n'est écrit sur l'appareil
+// tant que l'utilisateur n'a pas activé « Garder sur cet appareil ». La clé « history »
+// n'existe que si l'option est activée.
+const historyEnabled = () => {
+  try { return localStorage.getItem("history") !== null; } catch { return false; }
+};
+function setHistoryEnabled(on) {
+  try {
+    if (on) localStorage.setItem("history", localStorage.getItem("history") || "[]");
+    else localStorage.removeItem("history");
+  } catch { /* stockage indisponible */ }
+  renderHistory();
+}
 // Le stockage local peut être modifié : on ne garde que des entrées numériques valides.
 const isNum = (n) => typeof n === "number" && Number.isFinite(n) && n >= 0;
 function loadHistory() {
+  if (!historyEnabled()) return [];
   try {
     const list = JSON.parse(localStorage.getItem("history") || "[]");
     return Array.isArray(list)
@@ -178,7 +192,10 @@ function el(tag, className, text) {
   return node;
 }
 function renderHistory() {
+  const enabled = historyEnabled();
+  $("historyToggle").checked = enabled;
   const list = loadHistory();
+  $("clearBtn").hidden = !list.length;
   const items = list.map((h) => {
     const li = document.createElement("li");
     li.append(
@@ -189,9 +206,13 @@ function renderHistory() {
     );
     return li;
   });
-  $("history").replaceChildren(...(items.length ? items : [el("li", "empty", "Aucun test pour l'instant — appuyez sur GO.")]));
+  const empty = enabled
+    ? "Aucun test enregistré pour l'instant."
+    : "Historique désactivé : les résultats ne sont pas conservés.";
+  $("history").replaceChildren(...(items.length ? items : [el("li", "empty", empty)]));
 }
 function saveResult(r) {
+  if (!historyEnabled()) return;
   const list = [{ date: Date.now(), ...r }, ...loadHistory()].slice(0, 10);
   try { localStorage.setItem("history", JSON.stringify(list)); } catch { /* stockage indisponible */ }
   renderHistory();
@@ -239,4 +260,9 @@ async function run() {
 
 $("startBtn").addEventListener("click", run);
 $("againBtn").addEventListener("click", run);
+$("historyToggle").addEventListener("change", (e) => setHistoryEnabled(e.target.checked));
+$("clearBtn").addEventListener("click", () => {
+  try { localStorage.setItem("history", "[]"); } catch { /* stockage indisponible */ }
+  renderHistory();
+});
 renderHistory();

@@ -196,3 +196,46 @@ body {
 }
 
 footer { text-align: center; color: var(--muted); font-size: 12px; }
+
+/* Information RGPD et réglages de l'historique */
+a { color: var(--down-2); }
+.notice { margin: 4px 0 0; max-width: 420px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.history-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+.history-head h2 { margin: 0; margin-right: auto; }
+.switch { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.slider {
+  position: relative;
+  width: 36px; height: 20px;
+  border-radius: 999px;
+  background: var(--track);
+  border: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.slider::after {
+  content: "";
+  position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.2s;
+}
+.switch input:checked + .slider { background: linear-gradient(135deg, var(--down-1), var(--down-2)); }
+.switch input:checked + .slider::after { transform: translateX(16px); background: #fff; }
+.switch input:focus-visible + .slider { outline: 2px solid var(--down-2); outline-offset: 2px; }
+.link { border: 0; background: none; color: var(--down-2); font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
+.link[hidden] { display: none; }
+footer { line-height: 1.6; }
+
+/* Page Confidentialité */
+.doc { display: block; max-width: 760px; }
+.doc .back { margin-bottom: 16px; }
+@media (max-width: 560px) { .doc table { display: block; overflow-x: auto; } }
+.doc h1 { font-size: 28px; letter-spacing: -0.5px; margin: 8px 0 0; }
+.doc h2 { font-size: 18px; margin: 28px 0 8px; }
+.doc p, .doc li { color: var(--text); line-height: 1.65; font-size: 15px; }
+.doc .muted { color: var(--muted); }
+.doc table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.doc th, .doc td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.doc th { color: var(--muted); font-weight: 600; }
+.back { display: inline-flex; gap: 6px; text-decoration: none; font-weight: 600; }

@@ -40,6 +40,13 @@ Les 2 premières secondes de chaque phase sont ignorées pour ne pas pénaliser 
 - `desktop/main.js` — la fenêtre Electron qui emballe `web/` pour Mac et Windows.
 - `.github/workflows/` — compilation automatique des apps et publication du site.
 
+## Vie privée (RGPD)
+
+Aucun compte, aucun cookie, aucune statistique ni publicité, donc pas de bandeau de consentement.
+L'adresse IP n'est transmise à Cloudflare qu'au moment où l'on lance un test (information affichée sous la jauge).
+L'historique est **désactivé par défaut** et, si on l'active, reste uniquement sur l'appareil.
+Détails : [politique de confidentialité et mentions légales](https://enzo78360.github.io/speedtest/confidentialite.html).
+
 ## Sécurité
 
 - **App de bureau** : Electron à jour, moteur de rendu isolé (`sandbox`, `contextIsolation`, sans accès à Node.js),
@@ -47,7 +54,7 @@ Les 2 premières secondes de chaque phase sont ignorées pour ne pas pénaliser 
   désactivés, et fusibles Electron verrouillés (`RunAsNode`, `NODE_OPTIONS` et `--inspect` désactivés).
 - **Site et app** : Content Security Policy stricte — seuls les scripts de l'app s'exécutent et seul
   `speed.cloudflare.com` peut être contacté. L'historique local est validé et affiché sans HTML.
-- **Contrôles automatiques** : `npm audit` et la suite [`tests/security.mjs`](tests/security.mjs) (12 attaques simulées)
+- **Contrôles automatiques** : `npm audit` et la suite [`tests/security.mjs`](tests/security.mjs) (attaques simulées et contrôles RGPD)
   tournent à chaque push, chaque lundi et avant chaque Release ; une version n'est publiée que si tout passe.
   Dependabot propose les mises à jour de sécurité, et les actions GitHub sont épinglées par empreinte.
 
