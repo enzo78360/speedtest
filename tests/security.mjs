@@ -101,7 +101,7 @@ async function rendererTests() {
       window.fetch = orig;
       return { status, calls, ms: performance.now() - t0 };
     })()`);
-    check("Serveur saturé : arrêt immédiat sans boucle", refusal?.status === 429 && refusal.calls <= 8 && refusal.ms < 2000,
+    check("Serveur saturé : arrêt immédiat sans boucle", refusal?.status === 429 && refusal.calls <= 12 && refusal.ms < 2000,
       refusal ? `${refusal.calls} requêtes, ${Math.round(refusal.ms)} ms` : "");
 
     // Serveur qui répond normalement (simulé, pour ne pas dépendre de Cloudflare) : mesure > 0 sur toute la phase.
@@ -118,6 +118,25 @@ async function rendererTests() {
     check("Téléchargement réussi : débit mesuré sur toute la phase", okRun?.speed > 1 && okRun.ms >= 9500,
       okRun ? (okRun.error || `${Math.round(okRun.speed)} Mbit/s simulés en ${Math.round(okRun.ms)} ms`) : "");
 
+    // Gros morceaux refusés, petits acceptés : l'app doit réduire la taille et mesurer quand même.
+    const adaptive = await evaluate2(`(async () => {
+      const orig = window.fetch;
+      const sizes = new Set();
+      window.fetch = async (url) => {
+        const size = Number(new URL(url).searchParams.get("bytes"));
+        sizes.add(size);
+        await new Promise((r) => setTimeout(r, 20));
+        return size > 5e6 ? new Response("", { status: 429 }) : new Response(new Uint8Array(size));
+      };
+      dlChunkIndex = 0;
+      let speed = null, error = null;
+      try { speed = await measureThroughput(downloadWorker, ["#000000", "#000000"]); } catch (e) { error = String(e); }
+      window.fetch = orig;
+      return { speed, error, sizes: [...sizes] };
+    })()`);
+    check("Gros téléchargements refusés : taille réduite, mesure maintenue", adaptive?.speed > 1,
+      adaptive ? (adaptive.error || `tailles essayées : ${adaptive.sizes.map((b) => b / 1e6 + " Mo").join(", ")}`) : "");
+
     // Même refus vu par un navigateur (sans en-tête CORS) : simple erreur réseau.
     const netFail = await evaluate2(`(async () => {
       const orig = window.fetch;
@@ -129,7 +148,7 @@ async function rendererTests() {
       window.fetch = orig;
       return { status, calls, ms: performance.now() - t0 };
     })()`);
-    check("Erreurs réseau répétées : abandon sans boucle", netFail?.status === 0 && netFail.calls <= 12 && netFail.ms < 3000,
+    check("Erreurs réseau répétées : abandon sans boucle", netFail?.status === 0 && netFail.calls <= 20 && netFail.ms < 3000,
       netFail ? `${netFail.calls} requêtes, ${Math.round(netFail.ms)} ms` : "");
 
     // --- Vie privée (RGPD) : état d'une première ouverture ---

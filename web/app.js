@@ -3,7 +3,7 @@ const BASE = "https://speed.cloudflare.com";
 const PING_COUNT = 12;
 const PHASE_MS = 10000;      // durée de chaque phase débit
 const STREAMS = 4;           // connexions parallèles
-const DL_CHUNK = 25e6;       // octets par requête de téléchargement
+const DL_CHUNKS = [25e6, 5e6, 1e6]; // octets par requête de téléchargement, du plus gros au plus petit
 const UL_CHUNK = 8e6;        // octets par requête d'envoi
 const SCALE = [0, 5, 10, 50, 100, 250, 500, 1000]; // graduations de la jauge (Mbit/s)
 
@@ -206,9 +206,24 @@ class HttpError extends Error {
   }
 }
 
+// Cloudflare peut refuser les gros téléchargements (429) tout en acceptant les petits :
+// en cas de refus, on passe à la taille inférieure au lieu d'abandonner la mesure.
+let dlChunkIndex = 0;
 async function downloadWorker(onBytes, signal) {
-  const res = await fetch(`${BASE}/__down?bytes=${DL_CHUNK}&r=${Math.random()}`, { signal, cache: "no-store" });
-  if (!res.ok) throw new HttpError(res.status);
+  let res;
+  for (;;) {
+    const size = DL_CHUNKS[dlChunkIndex];
+    try {
+      res = await fetch(`${BASE}/__down?bytes=${size}&r=${Math.random()}`, { signal, cache: "no-store" });
+      if (res.ok) break;
+    } catch (e) {
+      // Dans un navigateur, un refus sans en-tête CORS n'est qu'une erreur réseau.
+      if (signal.aborted || dlChunkIndex === DL_CHUNKS.length - 1) throw e;
+    }
+    if (res && !res.ok && dlChunkIndex === DL_CHUNKS.length - 1) throw new HttpError(res.status);
+    if (DL_CHUNKS[dlChunkIndex] === size) dlChunkIndex++; // une seule connexion fait descendre d'un cran
+    res = null;
+  }
   const reader = res.body.getReader();
   for (;;) {
     const { done, value } = await reader.read();
@@ -294,6 +309,7 @@ let running = false;
 async function run() {
   if (running) return;
   running = true;
+  dlChunkIndex = 0;
   desktop?.setRunning(true);
   $("startBtn").hidden = true;
   $("againBtn").hidden = true;
