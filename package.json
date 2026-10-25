@@ -15,7 +15,7 @@
     "test:security": "node tests/security.mjs"
   },
   "devDependencies": {
-    "electron": "44.9.3",
+    "electron": "45.0.0",
     "electron-builder": "26.17.0"
   },
   "build": {
