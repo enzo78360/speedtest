@@ -42,7 +42,9 @@ function scaleRatio(v) {
 }
 
 function setGauge(v) {
-  fill.style.strokeDashoffset = 100 * (1 - scaleRatio(Math.max(v, 0)));
+  const ratio = scaleRatio(Math.max(v, 0));
+  fill.style.strokeDashoffset = 100 * (1 - ratio);
+  fill.style.opacity = ratio > 0 ? 1 : 0;
   $("liveValue").textContent = fmt(v);
 }
 const fmt = (n) => (n >= 100 ? n.toFixed(0) : n.toFixed(1));

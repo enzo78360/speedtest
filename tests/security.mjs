@@ -1,6 +1,6 @@
 // Tests de sécurité : lance l'app Electron et tente des attaques classiques.
 // Usage : npm run test:security  (après `npm install`)
-// Avec APP=<chemin du binaire empaqueté>, vérifie aussi les fusibles de l'app compilée.
+// Avec APP=<chemin du binaire empaqueté>, tous les tests visent l'app compilée (fusibles compris).
 import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import net from "node:net";
@@ -35,6 +35,8 @@ async function connect() {
           pending.set(++id, (msg) => resolve(msg.result?.result?.value));
           ws.send(JSON.stringify({ id, method: "Runtime.evaluate", params: { expression, awaitPromise: true, returnByValue: true } }));
         });
+        // Le premier lancement d'une app fraîchement compilée peut être lent : on attend la page complète.
+        await evaluate(`new Promise((r) => document.readyState === "complete" ? r(true) : addEventListener("load", () => r(true)))`);
         return { ws, evaluate };
       }
     } catch { /* pas encore prêt */ }
@@ -44,10 +46,13 @@ async function connect() {
 }
 
 async function rendererTests() {
-  const app = spawn(electron, [".", `--remote-debugging-port=${PORT}`], { stdio: "ignore" });
+  const [bin, args] = process.env.APP ? [process.env.APP, []] : [electron, ["."]];
+  const app = spawn(bin, [...args, `--remote-debugging-port=${PORT}`], { stdio: "ignore" });
   try {
     const { ws, evaluate } = await connect();
     await sleep(500);
+
+    check("L'interface s'affiche", (await evaluate(`!!document.getElementById("startBtn") && document.body.innerText.includes("SpeedTest")`)) === true);
 
     check("Pas d'accès à Node.js (require)", (await evaluate("typeof require")) === "undefined");
     check("Pas d'accès à Node.js (process)", (await evaluate("typeof process")) === "undefined");
