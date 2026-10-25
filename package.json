@@ -1,7 +1,7 @@
 {
   "name": "speedtest",
   "productName": "SpeedTest",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Test de débit internet (ping, téléchargement, envoi)",
   "author": "enzo78360",
   "license": "MIT",
@@ -10,31 +10,65 @@
     "web": "python3 -m http.server 8080 --directory web",
     "start": "electron .",
     "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win"
+    "build:win": "electron-builder --win",
+    "audit": "npm audit --audit-level=high",
+    "test:security": "node tests/security.mjs"
   },
   "devDependencies": {
-    "electron": "^33.2.0",
-    "electron-builder": "^25.1.8"
+    "electron": "44.9.3",
+    "electron-builder": "26.17.0"
   },
   "build": {
     "appId": "com.speedtest.app",
     "productName": "SpeedTest",
-    "files": ["desktop/**", "web/**"],
-    "directories": { "output": "dist", "buildResources": "build" },
+    "files": [
+      "desktop/**",
+      "web/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
     "artifactName": "SpeedTest-${version}-${os}-${arch}.${ext}",
-    "publish": { "provider": "github", "releaseType": "release" },
+    "publish": {
+      "provider": "github",
+      "releaseType": "release"
+    },
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
       "category": "public.app-category.utilities",
       "identity": null
     },
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64", "arm64"] }]
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "artifactName": "SpeedTest-${version}-Windows-Setup.${ext}"
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
     }
   }
 }

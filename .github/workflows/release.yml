@@ -1,5 +1,6 @@
 # Compile l'app Mac (.dmg) et Windows (.exe) et les publie dans une Release GitHub
 # à chaque tag "v*" (ex. : git tag v1.0.0 && git push --tags).
+# Rien n'est publié si l'audit des dépendances ou les tests de sécurité échouent.
 name: Release
 
 on:
@@ -8,10 +9,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  security:
+    uses: ./.github/workflows/security.yml
+
   build:
+    needs: security
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -22,11 +29,13 @@ jobs:
             target: --win
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
-      - run: npm install
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci
       - run: npx electron-builder ${{ matrix.target }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

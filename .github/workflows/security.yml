@@ -1,0 +1,35 @@
+# Audit des dépendances + tests de sécurité de l'app (aussi appelé avant chaque Release).
+name: Sécurité
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # chaque lundi : détecte les nouvelles failles publiées
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Audit des dépendances
+        run: npm audit --audit-level=high
+      - name: Compilation de test
+        run: npx electron-builder --mac dir --arm64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Tests de sécurité
+        run: npm run test:security
+        env:
+          APP: ${{ github.workspace }}/dist/mac-arm64/SpeedTest.app/Contents/MacOS/SpeedTest

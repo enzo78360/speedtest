@@ -23,10 +23,14 @@ const polar = (deg, r = R) => {
 const arc = `M ${polar(135)} A ${R} ${R} 0 1 1 ${polar(45)}`;
 $("gaugeTrack").setAttribute("d", arc);
 fill.setAttribute("d", arc);
-$("ticks").innerHTML = SCALE.map((v, i) => {
+$("ticks").replaceChildren(...SCALE.map((v, i) => {
   const [x, y] = polar(135 + (270 * i) / (SCALE.length - 1), R - 32);
-  return `<text x="${x}" y="${y}">${v}</text>`;
-}).join("");
+  const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  t.setAttribute("x", x);
+  t.setAttribute("y", y);
+  t.textContent = v;
+  return t;
+}));
 
 // Position (0..1) d'une vitesse sur l'échelle : chaque intervalle a la même longueur.
 function scaleRatio(v) {
@@ -157,17 +161,35 @@ function uploadWorker(onBytes, signal) {
 }
 
 // --- Historique ---
+// Le stockage local peut être modifié : on ne garde que des entrées numériques valides.
+const isNum = (n) => typeof n === "number" && Number.isFinite(n) && n >= 0;
 function loadHistory() {
-  try { return JSON.parse(localStorage.getItem("history") || "[]"); } catch { return []; }
+  try {
+    const list = JSON.parse(localStorage.getItem("history") || "[]");
+    return Array.isArray(list)
+      ? list.filter((h) => h && isNum(h.date) && isNum(h.ping) && isNum(h.down) && isNum(h.up)).slice(0, 10)
+      : [];
+  } catch { return []; }
+}
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.textContent = text;
+  return node;
 }
 function renderHistory() {
   const list = loadHistory();
-  $("history").innerHTML = list.length
-    ? list.map((h) => `<li><time>${new Date(h.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</time>
-        <span class="d">↓ ${fmt(h.down)}</span>
-        <span class="u">↑ ${fmt(h.up)}</span>
-        <span>${h.ping.toFixed(0)} ms</span></li>`).join("")
-    : `<li class="empty">Aucun test pour l'instant — appuyez sur GO.</li>`;
+  const items = list.map((h) => {
+    const li = document.createElement("li");
+    li.append(
+      el("time", "", new Date(h.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })),
+      el("span", "d", `↓ ${fmt(h.down)}`),
+      el("span", "u", `↑ ${fmt(h.up)}`),
+      el("span", "", `${h.ping.toFixed(0)} ms`),
+    );
+    return li;
+  });
+  $("history").replaceChildren(...(items.length ? items : [el("li", "empty", "Aucun test pour l'instant — appuyez sur GO.")]));
 }
 function saveResult(r) {
   const list = [{ date: Date.now(), ...r }, ...loadHistory()].slice(0, 10);

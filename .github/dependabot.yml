@@ -1,0 +1,11 @@
+# Propose automatiquement les mises à jour de sécurité (Electron, outils de build, actions GitHub).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
