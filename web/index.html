@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0d17">
+  <title>SpeedTest</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glow" aria-hidden="true"></div>
+  <div class="titlebar" aria-hidden="true"></div>
+
+  <main class="app">
+    <header class="top">
+      <div class="brand">
+        <img src="logo.svg" alt="" width="36" height="36">
+        <span>SpeedTest</span>
+      </div>
+      <div class="server" id="server">
+        <span class="dot"></span>
+        <span id="serverText">Cloudflare</span>
+      </div>
+    </header>
+
+    <section class="stage">
+      <div class="gauge-wrap">
+        <svg class="gauge" viewBox="0 0 300 300" aria-hidden="true">
+          <defs>
+            <linearGradient id="gDown" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#7c3aed"/>
+              <stop offset="1" stop-color="#22d3ee"/>
+            </linearGradient>
+            <linearGradient id="gUp" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#ec4899"/>
+              <stop offset="1" stop-color="#f59e0b"/>
+            </linearGradient>
+          </defs>
+          <path class="track" id="gaugeTrack" pathLength="100"/>
+          <path class="fill" id="gaugeFill" pathLength="100"/>
+          <g id="ticks" class="ticks"></g>
+        </svg>
+
+        <button id="startBtn" class="go" aria-label="Démarrer le test">
+          <span>GO</span>
+        </button>
+
+        <div class="readout" id="readout" hidden>
+          <span class="phase" id="phase">Ping</span>
+          <span class="value" id="liveValue">0</span>
+          <span class="unit" id="liveUnit">Mbit/s</span>
+        </div>
+      </div>
+
+      <canvas class="spark" id="spark" height="70"></canvas>
+      <button id="againBtn" class="again" hidden>↻ Relancer le test</button>
+    </section>
+
+    <section class="results">
+      <article class="card big down">
+        <header><i>↓</i> Téléchargement</header>
+        <p><b id="download">–</b> <small>Mbit/s</small></p>
+      </article>
+      <article class="card big up">
+        <header><i>↑</i> Envoi</header>
+        <p><b id="upload">–</b> <small>Mbit/s</small></p>
+      </article>
+      <article class="card">
+        <header>Ping</header>
+        <p><b id="ping">–</b> <small>ms</small></p>
+      </article>
+      <article class="card">
+        <header>Gigue</header>
+        <p><b id="jitter">–</b> <small>ms</small></p>
+      </article>
+    </section>
+
+    <section class="history">
+      <h2>Historique</h2>
+      <ul id="history"></ul>
+    </section>
+
+    <footer>Mesures via speed.cloudflare.com</footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

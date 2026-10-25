@@ -1,0 +1,40 @@
+{
+  "name": "speedtest",
+  "productName": "SpeedTest",
+  "version": "1.0.0",
+  "description": "Test de débit internet (ping, téléchargement, envoi)",
+  "author": "enzo78360",
+  "license": "MIT",
+  "main": "desktop/main.js",
+  "scripts": {
+    "web": "python3 -m http.server 8080 --directory web",
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.speedtest.app",
+    "productName": "SpeedTest",
+    "files": ["desktop/**", "web/**"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "artifactName": "SpeedTest-${version}-${os}-${arch}.${ext}",
+    "publish": { "provider": "github", "releaseType": "release" },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "category": "public.app-category.utilities",
+      "identity": null
+    },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64", "arm64"] }]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "SpeedTest-${version}-Windows-Setup.${ext}"
+    }
+  }
+}
