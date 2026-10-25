@@ -2,6 +2,10 @@
 const { app, BrowserWindow, session, shell } = require("electron");
 const path = require("path");
 
+// L'app ne garde aucun secret (ni cookie ni mot de passe) : on évite que Chromium
+// demande l'accès au trousseau macOS (« SpeedTest Safe Storage ») au lancement.
+app.commandLine.appendSwitch("use-mock-keychain");
+
 const WEB_DIR = path.join(__dirname, "..", "web");
 const INDEX = path.join(WEB_DIR, "index.html");
 

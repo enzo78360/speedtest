@@ -50,7 +50,7 @@ Détails : [politique de confidentialité et mentions légales](https://enzo7836
 ## Sécurité
 
 - **App de bureau** : Electron à jour, moteur de rendu isolé (`sandbox`, `contextIsolation`, sans accès à Node.js),
-  navigation et pop-ups bloquées, aucune permission accordée (caméra, micro, localisation…), outils de développement
+  navigation et pop-ups bloquées, aucune permission accordée (caméra, micro, localisation…), aucun accès au trousseau macOS, outils de développement
   désactivés, et fusibles Electron verrouillés (`RunAsNode`, `NODE_OPTIONS` et `--inspect` désactivés).
 - **Site et app** : Content Security Policy stricte — seuls les scripts de l'app s'exécutent et seul
   `speed.cloudflare.com` peut être contacté. L'historique local est validé et affiché sans HTML.

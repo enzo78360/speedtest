@@ -1,7 +1,7 @@
 {
   "name": "speedtest",
   "productName": "SpeedTest",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Test de débit internet (ping, téléchargement, envoi)",
   "author": "enzo78360",
   "license": "MIT",
@@ -64,7 +64,6 @@
     },
     "electronFuses": {
       "runAsNode": false,
-      "enableCookieEncryption": true,
       "enableNodeOptionsEnvironmentVariable": false,
       "enableNodeCliInspectArguments": false,
       "onlyLoadAppFromAsar": true
