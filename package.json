@@ -1,7 +1,7 @@
 {
   "name": "speedtest",
   "productName": "SpeedTest",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Test de débit internet (ping, téléchargement, envoi)",
   "author": "enzo78360",
   "license": "MIT",
@@ -69,6 +69,7 @@
       "enableNodeCliInspectArguments": false,
       "onlyLoadAppFromAsar": true,
       "grantFileProtocolExtraPrivileges": false
-    }
+    },
+    "afterSign": "build/adhoc-sign.cjs"
   }
 }

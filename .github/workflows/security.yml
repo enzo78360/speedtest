@@ -29,6 +29,8 @@ jobs:
         run: npx electron-builder --mac dir --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Signature de l'app Mac
+        run: codesign --verify --deep --strict dist/mac-arm64/SpeedTest.app
       - name: Tests de sécurité
         run: npm run test:security
         env:
