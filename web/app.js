@@ -100,6 +100,14 @@ async function pingOnce() {
   return Math.max(rtt - serverMs, 0.1);
 }
 
+// Ping = médiane ; gigue = écart moyen entre mesures successives, dans l'ordre où elles ont été prises.
+function latencyStats(samples) {
+  let jitter = 0;
+  for (let i = 1; i < samples.length; i++) jitter += Math.abs(samples[i] - samples[i - 1]);
+  const sorted = [...samples].sort((a, b) => a - b);
+  return { ping: sorted[Math.floor(sorted.length / 2)], jitter: samples.length > 1 ? jitter / (samples.length - 1) : 0 };
+}
+
 async function measurePing() {
   const samples = [];
   for (let i = 0; i < PING_COUNT; i++) {
@@ -107,11 +115,27 @@ async function measurePing() {
     if (i > 0) samples.push(ms); // la 1re requête inclut l'ouverture TLS
     $("liveValue").textContent = ms.toFixed(0);
   }
-  // Gigue : écart moyen entre mesures successives, dans l'ordre où elles ont été prises.
-  let jitter = 0;
-  for (let i = 1; i < samples.length; i++) jitter += Math.abs(samples[i] - samples[i - 1]);
-  const sorted = [...samples].sort((a, b) => a - b);
-  return { ping: sorted[Math.floor(sorted.length / 2)], jitter: jitter / (samples.length - 1) };
+  return latencyStats(samples);
+}
+
+// Dans l'app de bureau, un vrai ping ICMP donne la latence réseau pure et la perte de paquets.
+// Sur le web (ou si l'ICMP est bloqué par le réseau), on se rabat sur la mesure HTTP, sans perte.
+const desktop = window.speedtest;
+async function measureLatency() {
+  if (desktop) {
+    $("liveValue").textContent = "…";
+    const icmp = await desktop.icmp().catch(() => null);
+    // Aucune réponse = ICMP filtré par le réseau, pas 100 % de perte.
+    if (icmp && icmp.received > 0) {
+      return { ...latencyStats(icmp.rtts), loss: (100 * (icmp.sent - icmp.received)) / icmp.sent };
+    }
+  }
+  return { ...(await measurePing()), loss: null };
+}
+
+function showLoss(loss) {
+  $("loss").textContent = loss === null ? "–" : loss < 10 && loss % 1 ? loss.toFixed(1) : loss.toFixed(0);
+  $("lossUnit").textContent = loss !== null ? "%" : desktop ? "ICMP bloqué par le réseau" : "dans l'app Mac / Windows";
 }
 
 // Lance une mesure de débit : `worker(onBytes, signal)` est relancé en boucle sur STREAMS connexions.
@@ -137,24 +161,53 @@ async function measureThroughput(worker, colors) {
     }
   }, 150);
 
+  // Si le serveur refuse (ex. 429 « trop de requêtes »), on arrête aussitôt : relancer en
+  // boucle ne ferait qu'aggraver le blocage et la mesure serait fausse.
+  let refused = null;
+  let phaseDone;
+  const phase = new Promise((r) => { phaseDone = r; setTimeout(r, PHASE_MS); });
+  // Dans un navigateur, un refus sans en-tête CORS ressemble à une simple erreur réseau :
+  // après 3 échecs d'affilée, la connexion abandonne (avec une pause croissante entre-temps).
   const loop = async () => {
+    let failures = 0;
     while (!ctrl.signal.aborted) {
-      try { await worker(onBytes, ctrl.signal); } catch { /* annulé ou erreur réseau */ }
+      try {
+        await worker(onBytes, ctrl.signal);
+        failures = 0;
+      } catch (e) {
+        if (ctrl.signal.aborted) return;
+        if (e instanceof HttpError || ++failures >= 3) {
+          refused = e instanceof HttpError ? e : new HttpError(0);
+          phaseDone();
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 250 * 2 ** failures));
+      }
     }
   };
   let warm = null; // état à 2 s : on ignore la montée en charge TCP
   setTimeout(() => { warm = [performance.now(), total]; }, 2000);
   const runners = Array.from({ length: STREAMS }, loop);
-  await new Promise((r) => setTimeout(r, PHASE_MS));
+  await phase;
   const end = [performance.now(), total];
   ctrl.abort();
   clearInterval(timer);
   await Promise.allSettled(runners);
+  // Un refus en cours de route n'invalide pas la mesure s'il y a eu assez de données.
+  if (refused && total < 1e6) throw refused;
   return warm ? mbps(end[1] - warm[1], end[0] - warm[0]) : mbps(end[1], end[0] - start);
+}
+
+class HttpError extends Error {
+  constructor(status) {
+    super(`HTTP ${status}`);
+    this.status = status;
+  }
 }
 
 async function downloadWorker(onBytes, signal) {
   const res = await fetch(`${BASE}/__down?bytes=${DL_CHUNK}&r=${Math.random()}`, { signal, cache: "no-store" });
+  if (!res.ok) throw new HttpError(res.status);
   const reader = res.body.getReader();
   for (;;) {
     const { done, value } = await reader.read();
@@ -169,7 +222,7 @@ function uploadWorker(onBytes, signal) {
     const xhr = new XMLHttpRequest();
     let sent = 0;
     xhr.upload.onprogress = (e) => { onBytes(e.loaded - sent); sent = e.loaded; };
-    xhr.onload = resolve;
+    xhr.onload = () => (xhr.status >= 400 ? reject(new HttpError(xhr.status)) : resolve());
     xhr.onerror = xhr.onabort = reject;
     signal.addEventListener("abort", () => xhr.abort(), { once: true });
     xhr.open("POST", `${BASE}/__up?r=${Math.random()}`);
@@ -236,21 +289,26 @@ function saveResult(r) {
 }
 
 // --- Déroulé du test ---
+let running = false;
 async function run() {
+  if (running) return;
+  running = true;
+  desktop?.setRunning(true);
   $("startBtn").hidden = true;
   $("againBtn").hidden = true;
   $("readout").hidden = false;
-  for (const id of ["ping", "jitter", "download", "upload"]) $(id).textContent = "–";
+  for (const id of ["ping", "jitter", "loss", "download", "upload"]) $(id).textContent = "–";
   points = [];
   drawSpark(["#7c3aed", "#22d3ee"]);
   try {
     gauge.classList.remove("up");
     setGauge(0);
-    $("phase").textContent = "Ping";
+    $("phase").textContent = desktop ? "Ping et perte" : "Ping";
     $("liveUnit").textContent = "ms";
-    const { ping, jitter } = await measurePing();
+    const { ping, jitter, loss } = await measureLatency();
     $("ping").textContent = ping.toFixed(0);
     $("jitter").textContent = jitter.toFixed(1);
+    showLoss(loss);
 
     $("phase").textContent = "↓ Téléchargement";
     $("liveUnit").textContent = "Mbit/s";
@@ -268,14 +326,24 @@ async function run() {
     $("phase").textContent = "Téléchargement";
     saveResult({ ping, jitter, down, up });
   } catch (e) {
-    $("phase").textContent = "Hors ligne ?";
+    gauge.classList.remove("up");
+    setGauge(0);
+    $("liveValue").textContent = "!";
+    $("phase").textContent = !(e instanceof HttpError)
+      ? "Hors ligne"
+      : e.status === 429 || e.status === 0 ? "Serveur saturé" : `Erreur ${e.status}`;
+    $("liveUnit").textContent = e instanceof HttpError ? "Réessayez dans quelques minutes" : "Vérifiez votre connexion";
     console.error(e);
   } finally {
     $("againBtn").hidden = false;
+    running = false;
+    desktop?.setRunning(false);
   }
 }
 
 $("startBtn").addEventListener("click", run);
+desktop?.onStartTest(run); // menu Test › Lancer le test (⌘R)
+showLoss(null);
 $("againBtn").addEventListener("click", run);
 $("historyToggle").addEventListener("change", (e) => setHistoryEnabled(e.target.checked));
 $("clearBtn").addEventListener("click", () => {

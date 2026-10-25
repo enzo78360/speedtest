@@ -56,6 +56,13 @@ async function rendererTests() {
 
     check("Pas d'accès à Node.js (require)", (await evaluate("typeof require")) === "undefined");
     check("Pas d'accès à Node.js (process)", (await evaluate("typeof process")) === "undefined");
+    check("Pont vers l'app limité à 3 fonctions", (await evaluate("Object.keys(window.speedtest).sort().join()")) === "icmp,onStartTest,setRunning");
+
+    // Le réseau de la CI peut filtrer l'ICMP : on vérifie la forme du résultat, pas la connexion.
+    const icmp = await evaluate("window.speedtest.icmp()");
+    check("Mesure ICMP (perte de paquets) valide",
+      icmp && icmp.sent > 0 && icmp.received >= 0 && icmp.received <= icmp.sent && icmp.rtts.length === icmp.received,
+      icmp ? `${icmp.received}/${icmp.sent} paquets reçus` : "aucun résultat");
 
     const csp = await evaluate(`fetch("https://example.com").then(() => "ok", () => "bloqué")`);
     check("CSP : requêtes vers d'autres sites bloquées", csp === "bloqué");
@@ -83,6 +90,34 @@ async function rendererTests() {
     const rows = await evaluate2(`document.querySelectorAll("#history li").length`);
     check("Historique falsifié : entrées invalides ignorées", rows === 1, `${rows} ligne(s) affichée(s)`);
     check("Historique falsifié : pas d'injection HTML", (await evaluate2("window.__pwned2 === undefined && !document.querySelector('#history img, #history b')")) === true);
+    // Serveur qui refuse (429) : arrêt immédiat, sans boucle de requêtes.
+    const refusal = await evaluate2(`(async () => {
+      const orig = window.fetch;
+      let calls = 0;
+      window.fetch = async () => { calls++; return new Response("", { status: 429 }); };
+      const t0 = performance.now();
+      let status = null;
+      try { await measureThroughput(downloadWorker, ["#000000", "#000000"]); } catch (e) { status = e.status; }
+      window.fetch = orig;
+      return { status, calls, ms: performance.now() - t0 };
+    })()`);
+    check("Serveur saturé : arrêt immédiat sans boucle", refusal?.status === 429 && refusal.calls <= 8 && refusal.ms < 2000,
+      refusal ? `${refusal.calls} requêtes, ${Math.round(refusal.ms)} ms` : "");
+
+    // Même refus vu par un navigateur (sans en-tête CORS) : simple erreur réseau.
+    const netFail = await evaluate2(`(async () => {
+      const orig = window.fetch;
+      let calls = 0;
+      window.fetch = async () => { calls++; throw new TypeError("Failed to fetch"); };
+      const t0 = performance.now();
+      let status = null;
+      try { await measureThroughput(downloadWorker, ["#000000", "#000000"]); } catch (e) { status = e.status; }
+      window.fetch = orig;
+      return { status, calls, ms: performance.now() - t0 };
+    })()`);
+    check("Erreurs réseau répétées : abandon sans boucle", netFail?.status === 0 && netFail.calls <= 12 && netFail.ms < 3000,
+      netFail ? `${netFail.calls} requêtes, ${Math.round(netFail.ms)} ms` : "");
+
     // --- Vie privée (RGPD) : état d'une première ouverture ---
     await evaluate2(`localStorage.clear(); location.reload(); true`);
     await sleep(1500);

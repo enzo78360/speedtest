@@ -5,7 +5,7 @@
 <h1 align="center">SpeedTest</h1>
 
 <p align="center">
-  Test de débit internet moderne — ping, gigue, téléchargement et envoi.<br>
+  Test de débit internet moderne — ping, gigue, perte de paquets, téléchargement et envoi.<br>
   Disponible pour <b>Mac</b>, <b>Windows</b> et en <b>site web</b>.
 </p>
 
@@ -22,7 +22,8 @@ Rendez-vous sur la page [Releases](https://github.com/enzo78360/speedtest/releas
 
 | Système | Fichier |
 | --- | --- |
-| macOS (Intel et Apple Silicon) | `SpeedTest-x.y.z-mac-universal.dmg` |
+| macOS — puce Apple (M1, M2, M3…) | `SpeedTest-x.y.z-mac-arm64.dmg` |
+| macOS — processeur Intel | `SpeedTest-x.y.z-mac-x64.dmg` |
 | Windows | `SpeedTest-x.y.z-Windows-Setup.exe` |
 
 > L'application n'est pas signée (certificats payants), le système affiche donc un avertissement au premier lancement :
@@ -33,7 +34,14 @@ Rendez-vous sur la page [Releases](https://github.com/enzo78360/speedtest/releas
 ## Fonctionnement
 
 Les mesures utilisent les serveurs publics de Cloudflare (`speed.cloudflare.com`) :
-ping (médiane de 11 requêtes, temps de traitement du serveur soustrait via `Server-Timing`), puis 10 s de téléchargement et 10 s d'envoi sur 4 connexions parallèles.
+ping, puis 10 s de téléchargement et 10 s d'envoi sur 4 connexions parallèles.
+
+- **App Mac / Windows** : ping, gigue et **perte de paquets** par un vrai ping ICMP (50 paquets en 5 s sur Mac, 20 sur Windows).
+- **Site web** : le navigateur ne peut pas envoyer d'ICMP ; le ping est mesuré en HTTP (médiane de 11 requêtes,
+  temps de traitement du serveur soustrait via `Server-Timing`) et la perte de paquets n'est pas disponible.
+
+Sur Mac, l'app a un menu natif en français (**⌘R** relance le test), empêche la mise en veille d'App Nap pendant
+une mesure, garde des mesures justes même en arrière-plan et retient la taille et la position de sa fenêtre.
 Les 2 premières secondes de chaque phase sont ignorées pour ne pas pénaliser la montée en charge.
 
 - `web/` — l'application (HTML/CSS/JS, aucune dépendance), aussi publiée telle quelle en site web.

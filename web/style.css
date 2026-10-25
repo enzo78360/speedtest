@@ -148,7 +148,9 @@ body {
 .again[hidden] { display: none; }
 
 /* Résultats */
-.results { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.results { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.results .card { grid-column: span 2; min-width: 0; }
+.results .card.big { grid-column: span 3; }
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -168,9 +170,7 @@ body {
 .card.down i { background: linear-gradient(135deg, var(--down-1), var(--down-2)); }
 .card.up i { background: linear-gradient(135deg, var(--up-1), var(--up-2)); }
 .card.big b { font-size: 34px; }
-@media (max-width: 620px) {
-  .results { grid-template-columns: repeat(2, 1fr); }
-}
+.card small { overflow-wrap: anywhere; }
 
 /* Historique */
 .history h2 { font-size: 15px; margin: 0 0 10px; color: var(--muted); font-weight: 600; }
@@ -240,3 +240,4 @@ footer { line-height: 1.6; }
 .doc th, .doc td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .doc th { color: var(--muted); font-weight: 600; }
 .back { display: inline-flex; gap: 6px; text-decoration: none; font-weight: 600; }
+.readout .phase { max-width: 70%; text-align: center; }
