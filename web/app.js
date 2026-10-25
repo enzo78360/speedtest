@@ -83,20 +83,35 @@ function drawSpark(colors) {
 }
 
 // --- Mesures ---
+// Durée d'un aller-retour réseau : temps entre l'envoi de la requête et le premier octet
+// de réponse, moins le temps de traitement annoncé par le serveur (en-tête Server-Timing).
+// Sans cette soustraction, le ping inclut ~30 ms de calcul côté Cloudflare.
+async function pingOnce() {
+  const url = `${BASE}/__down?bytes=0&r=${Math.random()}`;
+  const t0 = performance.now();
+  const res = await fetch(url, { cache: "no-store" });
+  await res.arrayBuffer();
+  const fallback = performance.now() - t0;
+  const serverMs = [...(res.headers.get("server-timing") || "").matchAll(/dur=([\d.]+)/g)]
+    .reduce((sum, m) => sum + Number(m[1]), 0);
+  const entry = performance.getEntriesByName(url).pop();
+  const rtt = entry && entry.responseStart > 0 ? entry.responseStart - entry.requestStart : fallback;
+  performance.clearResourceTimings();
+  return Math.max(rtt - serverMs, 0.1);
+}
+
 async function measurePing() {
   const samples = [];
   for (let i = 0; i < PING_COUNT; i++) {
-    const t0 = performance.now();
-    await fetch(`${BASE}/__down?bytes=0&r=${Math.random()}`, { cache: "no-store" });
-    const ms = performance.now() - t0;
+    const ms = await pingOnce();
     if (i > 0) samples.push(ms); // la 1re requête inclut l'ouverture TLS
     $("liveValue").textContent = ms.toFixed(0);
   }
-  samples.sort((a, b) => a - b);
-  const ping = samples[Math.floor(samples.length / 2)];
+  // Gigue : écart moyen entre mesures successives, dans l'ordre où elles ont été prises.
   let jitter = 0;
   for (let i = 1; i < samples.length; i++) jitter += Math.abs(samples[i] - samples[i - 1]);
-  return { ping, jitter: jitter / (samples.length - 1) };
+  const sorted = [...samples].sort((a, b) => a - b);
+  return { ping: sorted[Math.floor(sorted.length / 2)], jitter: jitter / (samples.length - 1) };
 }
 
 // Lance une mesure de débit : `worker(onBytes, signal)` est relancé en boucle sur STREAMS connexions.

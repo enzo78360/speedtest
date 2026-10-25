@@ -33,7 +33,7 @@ Rendez-vous sur la page [Releases](https://github.com/enzo78360/speedtest/releas
 ## Fonctionnement
 
 Les mesures utilisent les serveurs publics de Cloudflare (`speed.cloudflare.com`) :
-ping (médiane de 11 requêtes), puis 10 s de téléchargement et 10 s d'envoi sur 4 connexions parallèles.
+ping (médiane de 11 requêtes, temps de traitement du serveur soustrait via `Server-Timing`), puis 10 s de téléchargement et 10 s d'envoi sur 4 connexions parallèles.
 Les 2 premières secondes de chaque phase sont ignorées pour ne pas pénaliser la montée en charge.
 
 - `web/` — l'application (HTML/CSS/JS, aucune dépendance), aussi publiée telle quelle en site web.
