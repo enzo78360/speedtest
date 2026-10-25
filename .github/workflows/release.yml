@@ -15,8 +15,21 @@ jobs:
   security:
     uses: ./.github/workflows/security.yml
 
-  build:
+  # Crée la Release une seule fois, sinon les jobs Mac et Windows en créent chacun une.
+  release:
     needs: security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - run: gh release view "$TAG" -R "$REPO" >/dev/null 2>&1 || gh release create "$TAG" -R "$REPO" --title "${TAG#v}" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+
+  build:
+    needs: release
     permissions:
       contents: write
     strategy:
